@@ -29,7 +29,7 @@ tf.flags.DEFINE_integer("batch_size", 1024,
                         "Mini-batch size for the training. Note that this "
                         "is the global batch size and not the per-shard batch.")
 tf.flags.DEFINE_integer("train_steps", 1000, "Total number of training steps.")
-tf.flags.DEFINE_integer("eval_steps", 0,
+tf.flags.DEFINE_integer("eval_steps", 1,
                         "Total number of evaluation steps. If `0`, evaluation "
                         "after training is skipped.")
 tf.flags.DEFINE_float("learning_rate", 0.05, "Learning rate.")
@@ -96,6 +96,11 @@ def get_model(features, mode):
 
     return logits
 
+def metric_fn(labels, logits):
+  accuracy = tf.metrics.accuracy(
+      labels=labels, predictions=tf.argmax(logits, axis=1))
+  return {"accuracy": accuracy}
+
 def cnn_model_fn(features, labels, mode, params):
 
     logits = get_model(features, mode)
@@ -112,6 +117,10 @@ def cnn_model_fn(features, labels, mode, params):
 
     # Calculate Loss (for both TRAIN and EVAL modes)
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+    accuracy = metric_fn(labels=labels, logits=logits)['accuracy']
+    logging_hook = tf.train.LoggingTensorHook({"loss": loss,
+                                               "accuracy": accuracy}, every_n_iter=10)
+
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -120,21 +129,20 @@ def cnn_model_fn(features, labels, mode, params):
         train_op = optimizer.minimize(
             loss=loss,
             global_step=tf.train.get_global_step())
-        return tf.contrib.tpu.TPUEstimatorSpec(mode=mode, loss=loss, train_op=train_op)
+        return tf.contrib.tpu.TPUEstimatorSpec(mode=mode, loss=loss, train_op=train_op,
+                                               training_hooks=[logging_hook])
 
-    # Add evaluation metrics (for EVAL mode)
-    eval_metric_ops = {
-        "accuracy": tf.metrics.accuracy(
-            labels=labels, predictions=predictions["classes"])}
-    return tf.contrib.tpu.TPUEstimatorSpec(
-        mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
+    if mode == tf.estimator.ModeKeys.EVAL:
+        return tf.contrib.tpu.TPUEstimatorSpec(
+            mode=mode, loss=loss, eval_metrics=(metric_fn, [labels, logits]))
+
 
 def train_input_fn(params):
     """train_input_fn defines the input pipeline used for training."""
     batch_size = params["batch_size"]
     data_dir = params["data_dir"]
 
-    (X, y), mappings = TrainClassifier.load_np_data(data_dir)
+    (X, y), mappings = load_np_data(data_dir)
     X = X.astype(np.float32) / 255.0
     y = y.astype(np.int32)
     dataset = tf.data.Dataset.from_tensor_slices((X, y)).batch(batch_size, drop_remainder=True).repeat().shuffle(
@@ -148,7 +156,7 @@ def eval_input_fn(params):
     batch_size = params["batch_size"]
     data_dir = params["data_dir"]
 
-    (X, y), mappings = TrainClassifier.load_np_data(data_dir)
+    (X, y), mappings = load_np_data(data_dir)
     X = X.astype(np.float32) / 255.0
     y = y.astype(np.int32)
     dataset = tf.data.Dataset.from_tensor_slices((X, y)).batch(batch_size, drop_remainder=True)\
@@ -158,7 +166,11 @@ def eval_input_fn(params):
     return features, labels
 
 
-def main():
+def main(argv):
+
+    del argv
+
+    tf.logging.set_verbosity(tf.logging.INFO)
 
     tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
         FLAGS.tpu,
@@ -185,12 +197,11 @@ def main():
         params={"data_dir": FLAGS.data_dir}
     )
 
-    classifier.train(input_fn=TrainClassifier.train_input_fn, max_steps=FLAGS.train_steps)
+    classifier.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
 
-    eval_results = classifier.evaluate(input_fn=TrainClassifier.eval_input_fn, steps=FLAGS.eval_steps)
+    eval_results = classifier.evaluate(input_fn=eval_input_fn, steps=FLAGS.eval_steps)
     print(eval_results)
 
 
 if __name__ == '__main__':
-    task = TrainClassifier('./data/raw/')
-    task.main()
+    tf.app.run()
