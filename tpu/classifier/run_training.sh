@@ -9,7 +9,8 @@ python train_cnn.py \
     --use_tpu=True \
     --iterations=500 \
     --train_steps=2000\
-    --data_dir=./data/raw/
+    --data_dir=./data/raw/ \
+     --model_dir=gs://tpu-demo-xsb62/output/
 
 
 
