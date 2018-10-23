@@ -29,7 +29,7 @@ tf.flags.DEFINE_integer("batch_size", 1024,
                         "Mini-batch size for the training. Note that this "
                         "is the global batch size and not the per-shard batch.")
 tf.flags.DEFINE_integer("train_steps", 1000, "Total number of training steps.")
-tf.flags.DEFINE_integer("eval_steps", 1,
+tf.flags.DEFINE_integer("eval_steps", 1024,
                         "Total number of evaluation steps. If `0`, evaluation "
                         "after training is skipped.")
 tf.flags.DEFINE_float("learning_rate", 0.05, "Learning rate.")
@@ -117,10 +117,6 @@ def cnn_model_fn(features, labels, mode, params):
 
     # Calculate Loss (for both TRAIN and EVAL modes)
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
-    accuracy = metric_fn(labels=labels, logits=logits)['accuracy']
-    logging_hook = tf.train.LoggingTensorHook({"loss": loss,
-                                               "accuracy": accuracy}, every_n_iter=10)
-
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -129,8 +125,7 @@ def cnn_model_fn(features, labels, mode, params):
         train_op = optimizer.minimize(
             loss=loss,
             global_step=tf.train.get_global_step())
-        return tf.contrib.tpu.TPUEstimatorSpec(mode=mode, loss=loss, train_op=train_op,
-                                               training_hooks=[logging_hook])
+        return tf.contrib.tpu.TPUEstimatorSpec(mode=mode, loss=loss, train_op=train_op)
 
     if mode == tf.estimator.ModeKeys.EVAL:
         return tf.contrib.tpu.TPUEstimatorSpec(
