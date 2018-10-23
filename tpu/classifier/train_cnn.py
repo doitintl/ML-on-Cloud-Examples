@@ -140,8 +140,9 @@ class TrainClassifier():
         (X, y), mappings = TrainClassifier.load_np_data(data_dir)
         X = X.astype(np.float32) / 255.0
         y = y.astype(np.int32)
-        dataset = tf.data.Dataset.from_tensor_slices((X, y)).batch(batch_size).repeat().shuffle(
-            buffer_size=50000)
+
+        dataset = tf.data.Dataset.from_tensor_slices((X, y)).repeat().shuffle(buffer_size=50000)\
+            .apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
 
         features, labels = dataset.make_initializable_iterator().get_next()
         return features, labels
@@ -151,9 +152,11 @@ class TrainClassifier():
         data_dir = params["data_dir"]
 
         (X, y), mappings = TrainClassifier.load_np_data(data_dir)
-        X = X / 255.0
-        dataset = tf.data.Dataset.from_tensor_slices((X, y)).batch(batch_size).repeat().shuffle(
-            buffer_size=50000)
+        X = X.astype(np.float32) / 255.0
+        y = y.astype(np.int32)
+
+        dataset = tf.data.Dataset.from_tensor_slices((X, y)).repeat().shuffle(buffer_size=50000) \
+            .apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
 
         features, labels = dataset.make_initializable_iterator().get_next()
         return features, labels
