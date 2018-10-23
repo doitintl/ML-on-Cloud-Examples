@@ -3,6 +3,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import os
 
+
 # Cloud TPU Cluster Resolver flags
 tf.flags.DEFINE_string(
     "tpu", default=None,
@@ -21,6 +22,8 @@ tf.flags.DEFINE_string(
     "metadata.")
 
 # Model specific parameters
+tf.flags.DEFINE_string("data_dir", "",
+                       "Path to directory containing the dataset")
 tf.flags.DEFINE_string("model_dir", None, "Estimator model_dir")
 tf.flags.DEFINE_integer("batch_size", 1024,
                         "Mini-batch size for the training. Note that this "
@@ -63,7 +66,7 @@ class TrainClassifier():
     def get_model(self, features, mode):
         """Model function for CNN."""
         # Input Layer
-        input_layer = tf.reshape(features["x"], [-1, 28, 28, 1])
+        input_layer = tf.reshape(features, [-1, 28, 28, 1])
 
         # Convolutional Layer #1
         conv1 = tf.layers.conv2d(
@@ -96,7 +99,7 @@ class TrainClassifier():
 
         return logits
 
-    def cnn_model_fn(self, features, labels, mode):
+    def cnn_model_fn(self, features, labels, mode, params):
 
         logits = self.get_model(features, mode)
         predictions = {
@@ -132,9 +135,12 @@ class TrainClassifier():
     def train_input_fn(params):
         """train_input_fn defines the input pipeline used for training."""
         batch_size = params["batch_size"]
-        X = params["X"]
-        y = params['y']
-        tf.data.Dataset.from_tensor_slices((X, y)).batch(batch_size).repeat().shuffle(
+        data_dir = params["data_dir"]
+
+        (X, y), mappings = TrainClassifier.load_np_data(data_dir)
+        X = X.astype(np.float32) / 255.0
+        y = y.astype(np.int32)
+        dataset = tf.data.Dataset.from_tensor_slices((X, y)).batch(batch_size).repeat().shuffle(
             buffer_size=50000)
 
         features, labels = dataset.make_initializable_iterator().get_next()
@@ -142,9 +148,11 @@ class TrainClassifier():
 
     def eval_input_fn(params):
         batch_size = params["batch_size"]
-        X = params["X"]
-        y = params['y']
-        tf.data.Dataset.from_tensor_slices((X, y)).batch(batch_size).repeat().shuffle(
+        data_dir = params["data_dir"]
+
+        (X, y), mappings = TrainClassifier.load_np_data(data_dir)
+        X = X / 255.0
+        dataset = tf.data.Dataset.from_tensor_slices((X, y)).batch(batch_size).repeat().shuffle(
             buffer_size=50000)
 
         features, labels = dataset.make_initializable_iterator().get_next()
@@ -152,13 +160,6 @@ class TrainClassifier():
 
 
     def main(self):
-        (X, y), mappings = TrainClassifier.load_np_data(self.path)
-        X_train, X_test, y_train, y_test = train_test_split(X / 255.0, y, test_size=0.2)
-        train_data = X_train.astype(np.float32)
-        train_labels = y_train.astype(np.int32)
-
-        eval_data = X_test.astype(np.float32)
-        eval_labels = y_test.astype(np.int32)
 
         tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
             FLAGS.tpu,
@@ -182,18 +183,12 @@ class TrainClassifier():
             eval_batch_size=FLAGS.batch_size,
             predict_batch_size=FLAGS.batch_size,
             config=run_config,
-            params={"X": X, "y":y},
+            params={"data_dir": FLAGS.data_dir}
         )
-
 
         classifier.train(input_fn=TrainClassifier.train_input_fn, max_steps=FLAGS.train_steps)
 
-        eval_input_fn = tf.estimator.inputs.numpy_input_fn(
-            x={"x": eval_data},
-            y=eval_labels,
-            num_epochs=1,
-            shuffle=False)
-        eval_results = classifier.evaluate(input_fn=eval_input_fn, steps=FLAGS.eval_steps)
+        eval_results = classifier.evaluate(input_fn=TrainClassifier.eval_input_fn, steps=FLAGS.eval_steps)
         print(eval_results)
 
 
