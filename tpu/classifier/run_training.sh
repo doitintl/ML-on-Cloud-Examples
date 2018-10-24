@@ -4,7 +4,7 @@ pip install sklearn
 export  DATA_DIR=/home/gad/data/raw/
 mkdir -p $DATA_DIR
 gsutil -m cp gs://draw-me-a-sheep/images/* ./data/raw/
-git clone https://github.com/doitintl/ML-on-Cloud-Examples.git
+git clone  -b tpu https://github.com/doitintl/ML-on-Cloud-Examples.git
 cd ML-on-Cloud-Examples/tpu/classifier/
 python train_cnn.py \
     --tpu=$TPU_NAME \
