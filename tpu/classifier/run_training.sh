@@ -3,8 +3,8 @@
 pip install sklearn
 mkdir -p ./data/raw/
 gsutil -m cp gs://draw-me-a-sheep/images/* ./data/raw/
-gid clone https://github.com/doitintl/ML-on-Cloud-Examples.git
-cd tpu/classifier/
+git clone https://github.com/doitintl/ML-on-Cloud-Examples.git
+cd ML-on-Cloud-Examples/tpu/classifier/
 python train_cnn.py \
     --tpu=$TPU_NAME \
     --use_tpu=False \
