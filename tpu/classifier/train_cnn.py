@@ -154,9 +154,9 @@ def main(argv):
         params={"data_dir": FLAGS.data_dir}
     )
 
-    train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
+    classifier.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
 
-    eval_results = evaluate(input_fn=eval_input_fn, steps=FLAGS.eval_steps)
+    eval_results = classifier.evaluate(input_fn=eval_input_fn, steps=FLAGS.eval_steps)
     print(eval_results)
 
 
