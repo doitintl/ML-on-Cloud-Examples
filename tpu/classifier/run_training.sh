@@ -1,7 +1,7 @@
 #!/bin/bash
 
 pip install sklearn
-EXPORT DATA_DIR=/home/gad/data/raw/
+export  DATA_DIR=/home/gad/data/raw/
 mkdir -p $DATA_DIR
 gsutil -m cp gs://draw-me-a-sheep/images/* ./data/raw/
 git clone https://github.com/doitintl/ML-on-Cloud-Examples.git
