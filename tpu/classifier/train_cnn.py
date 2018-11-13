@@ -4,9 +4,6 @@ import numpy as np
 import os
 
 
-
-
-
 def load_np_data(path):
     data = []
     labels = []
