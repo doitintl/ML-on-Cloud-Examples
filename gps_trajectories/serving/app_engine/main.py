@@ -2,6 +2,8 @@ from oauth2client.client import GoogleCredentials
 from googleapiclient import discovery
 from flask import Flask, request
 import json
+
+from model.classes import GPSClasses
 from model.feature_extraction import GPSTrajectoriesModel
 
 VERSION_NAME = 'v2'
@@ -11,7 +13,7 @@ PROJECT_ID = 'gad-playground-212407'
 app = Flask(__name__)
 
 # Initialize objects
-gps_model = GPSTrajectoriesModel()
+gps_model = GPSClasses()
 
 
 @app.route('/mode_prediction', methods=['POST'])
@@ -26,14 +28,17 @@ def generate_predictions():
     # Extract features from data
     features = GPSTrajectoriesModel.extract_features(records)
 
-    return json.dumps(_query_model(features))
+    # Invokes Cloud ML model
+    response = _query_model(features)
+
+    return json.dumps(response)
 
 
 def _query_model(data):
     """
     Uses a Cloud Machine Learning Engine client to generate predictions
-    :param features: tuple of strings with account-billing-ids
-    :return: dictionary of predictions with form: {"account_billing_id" : prediction, ...}
+    :param data: tuple of strings with account-billing-ids
+    :return: Ordered list on class names ["car", "car" ... ]
     """
     model_name = 'projects/{}/models/{}'.format(PROJECT_ID, MODEL_NAME)
     model_name += '/versions/{}'.format(VERSION_NAME)
@@ -51,7 +56,7 @@ def _query_model(data):
         body=request_body)
     response = request.execute()
 
-    response = GPSTrajectoriesModel.parse_results(response, gps_model.classes)
+    response = GPSClasses.parse_results(response, gps_model.classes)
 
     return response
 

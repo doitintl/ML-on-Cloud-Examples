@@ -83,9 +83,3 @@ class GPSTrajectoriesModel:
 
         return df
 
-    @staticmethod
-    def parse_results(probs, classes):
-        return [classes[np.argmax(np.array(x))] for x in probs['predictions']]
-
-    def __init__(self):
-        self.classes = ['airplane', 'bike', 'boat', 'bus', 'car', 'motorcycle', 'run', 'subway',  'taxi']

@@ -23,5 +23,5 @@ def test_prediction():
                               6: 116.3465516,  7: 116.3481583}}
     r = requests.post('http://localhost:8080/mode_prediction', json={'gps_trajectories': payload})
 
-    assert (json.loads(r.content)[0] == 'airplane')
+    assert (json.loads(r.content)[0] == 'car')
 
