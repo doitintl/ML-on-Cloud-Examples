@@ -7,7 +7,8 @@ class GPSClasses:
     def __init__(self):
 
         # TODO: initialize this with the saved LabelEncoder from GCS
-        self.classes = ['airplane', 'bike', 'boat', 'bus', 'car', 'motorcycle', 'run', 'subway', 'taxi']
+        self.classes = ['airplane', 'bike', 'boat', 'bus', 'car', 'motorcycle', 'run',
+                           'subway', 'taxi', 'train', 'walk']
 
     @staticmethod
     def parse_results(probs, classes):
