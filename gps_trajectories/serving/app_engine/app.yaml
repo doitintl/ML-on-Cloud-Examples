@@ -1,0 +1,7 @@
+runtime: python37
+
+handlers:
+
+- url: /mode_prediction
+  script: auto
+  login: optional
