@@ -61,7 +61,7 @@ class GPSTrajectoriesModel:
         Calculates the speed from GPS trajectories DataFrame
 
         :param df: Dataframe containing "latitude", "longitude" and "sample_time" columns
-        :return: 
+        :return:
         """
         df = df.copy()
         df.loc[:, 'sample_time'] = df['sample_time'].apply(pd.Timestamp)
@@ -85,7 +85,7 @@ class GPSTrajectoriesModel:
 
     @staticmethod
     def parse_results(probs, classes):
-        return [classes[np.argmax(np.array(x))] for x in probs]
+        return [classes[np.argmax(np.array(x))] for x in probs['predictions']]
 
     def __init__(self):
         self.classes = ['airplane', 'bike', 'boat', 'bus', 'car', 'motorcycle', 'run', 'subway',  'taxi']
