@@ -82,10 +82,7 @@ bst = xgb.train(params, dtrain, 2000000,
                 verbose_eval=10, early_stopping_rounds=10,
                evals=[(dtrain,'train'), (dtest,'eval')] )
 
-# ---------------------------------------
-# 2. Export and save the model to GCS
-# ---------------------------------------
-# [START export-to-gcs]
+
 # Export the model to a file
 model = 'model.bst'
 bst.save_model(model)
@@ -96,4 +93,3 @@ blob = bucket.blob('{}/model/{}'.format(
     datetime.datetime.now().strftime('gps_traj_%Y%m%d_%H%M%S'),
     model))
 blob.upload_from_filename(model)
-# [END export-to-gcs]
