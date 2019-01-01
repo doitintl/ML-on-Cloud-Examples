@@ -2,10 +2,10 @@ from flask import Flask, request
 import json
 import numpy as np
 import tensorflow as tf
-VERSION_NAME = 'v2'
-MODEL_NAME = 'transportation_mode'
-PROJECT_ID = 'gad-playground-212407'
 from agent import DQNAgent
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
 
@@ -42,7 +42,7 @@ def handle_results():
     global rounds_played
 
     payload = json.loads(request.data)[0]
-    print(payload)
+   #print(payload)
 
     state = parse_state(payload['current_state'])
     next_state = parse_state(payload['new_state'])
@@ -57,7 +57,7 @@ def handle_results():
     if (rounds_played > 5) or done:
         print("\n\ntraining!!\n\n")
         with graph.as_default():
-            agent.replay(50)
+            agent.replay(300)
         rounds_played = 0
         print(f'epsilon={agent.epsilon}')
     return json.dumps({'result': 'success!'})

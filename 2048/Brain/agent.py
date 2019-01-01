@@ -19,7 +19,7 @@ class DQNAgent:
         self.epsilon_decay = 0.001
         self.learning_rate = 0.001
         self.model = self._build_model()
-
+        self.MEMORY_SIZE = 500
 
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
@@ -42,6 +42,7 @@ class DQNAgent:
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
+        if len(self.memory) > self.MEMORY_SIZE: self.memory.pop()
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
@@ -69,8 +70,8 @@ class DQNAgent:
                 update_target[action] = reward + (self.gamma * np.max(new_q))
             targets[i] = update_target
 
-        self.model.train_on_batch(inputs, targets)
-
+        loss = self.model.train_on_batch(inputs, targets)# , epochs=5, verbose=2)
+        print("loss = ", loss)
         self.model.save_weights('weights.h5', overwrite=True)
         if self.epsilon > self.epsilon_min:
             self.epsilon -= self.epsilon_decay
