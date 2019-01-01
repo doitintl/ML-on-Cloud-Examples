@@ -27,8 +27,7 @@ def act():
     """
     #print (request.data)
     payload = json.loads(request.data)
-    state = np.concatenate(payload['state']).ravel().tolist()
-    state = np.array(state).reshape(1, 16)
+    state = parse_state(payload['state'])
 
     with graph.as_default():
 
@@ -45,26 +44,31 @@ def handle_results():
     payload = json.loads(request.data)[0]
     print(payload)
 
-    state = np.concatenate(payload['current_state']).ravel().tolist()
-    state = np.array(state).reshape(1,16)
-    next_state = np.concatenate(payload['new_state']).ravel().tolist()
-    next_state = np.array(next_state).reshape(1,16)
-    reward = payload['reward']
+    state = parse_state(payload['current_state'])
+    next_state = parse_state(payload['new_state'])
+    reward = float(payload['reward'] > 0)
     done = payload['done']
     action = ACTIONS_MAP[payload['action']]
 
     agent.remember(state=state, next_state=next_state, action=action, reward=reward, done=done)
 
     rounds_played += 1
-    print("played ", str(rounds_played), " rounds")
-    if (rounds_played > 10) or done:
+    #print("played ", str(rounds_played), " rounds")
+    if (rounds_played > 5) or done:
         print("\n\ntraining!!\n\n")
         with graph.as_default():
-            agent.replay(5)
+            agent.replay(50)
         rounds_played = 0
-
+        print(f'epsilon={agent.epsilon}')
     return json.dumps({'result': 'success!'})
 
+
+def parse_state(state):
+    x = np.concatenate(state).ravel().tolist()
+    x = np.array(x).reshape(1, 16)
+    x[x == 0] = 1
+    x = np.log2(x) / 16.0
+    return x
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8080, debug=True)

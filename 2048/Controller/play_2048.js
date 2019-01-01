@@ -7,7 +7,7 @@
 
 const keys = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight']
 const puppeteer = require('puppeteer')
-
+const MAX_STAGNATION = 5
 
 async function request_action(body, agent_browser) {
 
@@ -68,23 +68,23 @@ async function report_results(body, agent_browser) {
 async function get_board_state(page) {
 
   var board_state = await page.evaluate(() => {
-    const class_name = '.tile-container'
+    const class_name = '.tile-container';
 
     let data = [];
-    let tiles = document.querySelectorAll(class_name)
+    let tiles = document.querySelectorAll(class_name);
     tiles = tiles[0]
     for (var element of tiles.childNodes) { // Loop through each tile
       let title = element.className; // Select the title
-      let value = parseInt(element.innerText) //Select the value of the tile
+      let value = parseInt(element.innerText); //Select the value of the tile
 
       // The tile's title indicates the position
-      var regex_position = /position-(\d)-(\d).*/g
-      var found = regex_position.exec(title)
+      var regex_position = /position-(\d)-(\d).*/g;
+      var found = regex_position.exec(title);
 
       // Extract data from the ttitle
-      x = parseInt(found[1]) - 1
-      y = 4 - parseInt(found[2]) - 1
-      merged = found[0].includes('merged')
+      x = parseInt(found[1]) - 1;
+      y = 4 - parseInt(found[2]) - 1;
+      merged = found[0].includes('merged');
 
       data.push({ x, y, value, merged }); // Push an object with the data onto our array
     }
@@ -111,13 +111,26 @@ async function get_board_state(page) {
  */
 async function get_current_score(page) {
   var current_score = await page.evaluate(() => {
-    const class_name = '.score-container'
+    const class_name = '.score-container';
     let data = [];
-    let elements = document.querySelectorAll(class_name)
-    score_element = elements[0]
-    return parseInt(score_element.innerText)
+    let elements = document.querySelectorAll(class_name);
+    score_element = elements[0];
+    return parseInt(score_element.innerText);
   });
   return current_score
+}
+
+/**
+ * Gets the current score from the page
+ * @param {*} page 
+ */
+async function check_game_over(page) {
+  var game_over = await page.evaluate(() => {
+    const class_name = '.game-message.game-over'
+    let elements = document.querySelectorAll(class_name);
+    return Object.keys(elements).length >  0
+  });
+  return game_over
 }
 
 /**
@@ -126,43 +139,59 @@ async function get_current_score(page) {
 async function play_game() {
   try {
 
-    var browser = await puppeteer.launch({ headless: false })
+    var browser = await puppeteer.launch({ headless: true })
     var agent_browser = await puppeteer.launch();
-    const page = await browser.newPage()
+    const page = await browser.newPage();
     await page.goto('https://play2048.co/')
-    await page.setViewport({ width: 560, height: 1068 })
-    await page.waitFor(3000) // for the page to first load
-
-    for (let i = 0; i < 50; i++) {
+    await page.setViewport({ width: 560, height: 1068 });
+    await page.waitFor(3000); // for the page to first load
+    
+    var stagnation = 0; //counts the number of "stuck" moves
+    for (let i = 0; i < 1000; i++) {
       sample = []
-      await page.waitFor(200)
+      await page.waitFor(200);
 
-      var current_state = await get_board_state(page)
-      var current_score = await get_current_score(page)
+      var current_state = await get_board_state(page);
+      var current_score = await get_current_score(page);
 
       var body = JSON.stringify({
         state: current_state
       })
 
-      action = await request_action(body, agent_browser)
+      action = await request_action(body, agent_browser);
       // action = keys[Math.floor(Math.random() * keys.length)];
-      await page.keyboard.press(action)
+      await page.keyboard.press(action);
 
       // wait for webapp to render
-      await page.waitFor(200)
+      await page.waitFor(200);
 
       // get new state
-      var new_score = await get_current_score(page)
-      var new_state = await get_board_state(page)
-      var reward = new_score - current_score
-      var done = false
+      var new_score = await get_current_score(page);
+      var new_state = await get_board_state(page);
+      var reward = new_score - current_score;
+      var done = await check_game_over(page);
       
-      // make a sample
-      sample.push({current_state, action, reward, new_state, done})
-      sample = JSON.stringify(sample)
-      response = await report_results(sample, agent_browser)
+      if (reward == 0){
+        stagnation +=1
+        if (stagnation > MAX_STAGNATION){
+          done = true
+        }
+      } else {
+        stagnation = 0;
+      }
+        
 
-      console.log(sample)
+      // make a sample
+      sample.push({current_state, action, reward, new_state, done});
+      sample = JSON.stringify(sample);
+      response = await report_results(sample, agent_browser);
+
+      //console.log(sample)
+      if (done) {
+        stagnation = 0;
+        console.log('Game Ended!, Game reward = ' + new_score);
+        break;
+      }
     }
     await browser.close()
     await agent_browser.close()
@@ -176,8 +205,8 @@ async function play_game() {
  * Main
  */
 (async () => {
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 100; i++) {
     await play_game()
-    console.log('game ' + i)
+    //console.log('game ' + i)
   }
 })()  
