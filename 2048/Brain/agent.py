@@ -14,23 +14,37 @@ class DQNAgent:
         self.action_size = action_size
         self.memory = deque(maxlen=500)
         self.gamma = 0.99    # discount rate
-        self.epsilon = 0.99  # exploration rate
+        self.epsilon = 0.1  # exploration rate
         self.epsilon_min = 0.10
         self.epsilon_decay = 0.001
         self.learning_rate = 0.001
         self.model = self._build_model()
-        self.MEMORY_SIZE = 10
+        self.MEMORY_SIZE = 500
 
     def _build_model(self):
-        # Neural Net for Deep-Q learning Model
-        input = lyr.Input(shape=(16, ))
-        #flattern = lyr.Flatten()(input)
-        dense_1 = lyr.Dense(64, activation='tanh')(input)
-        dense_2 = lyr.Dense(64, activation='tanh')(dense_1)
-        dense_3 = lyr.Dense(64, activation='relu')(dense_2)
-        output = lyr.Dense(self.action_size, activation='linear')(dense_3)
+        inputs = lyr.Input(shape=(4, 4, 1))
 
-        model = Model(inputs=input, outputs=output)
+        conv_22 = lyr.Conv2D(16, (2, 2), padding='same', activation='relu')(inputs)
+        pool_22 = lyr.MaxPooling2D((2, 2))(conv_22)
+
+        conv_14 = lyr.Conv2D(16, (1, 4), padding='same', activation='relu')(inputs)
+        pool_14 = lyr.MaxPooling2D((1, 2))(conv_14)
+
+        conv_41 = lyr.Conv2D(16, (4, 1), padding='same', activation='relu')(inputs)
+        pool_41 = lyr.MaxPooling2D((2, 1))(conv_41)
+
+        flat_22 = lyr.Flatten()(pool_22)
+        flat_14 = lyr.Flatten()(pool_14)
+        flat_41 = lyr.Flatten()(pool_41)
+
+        concat = lyr.concatenate([flat_22, flat_14, flat_41])
+
+        dense_1 = lyr.Dense(128, activation='relu')(concat)
+        dense_2 = lyr.Dense(128, activation='relu')(dense_1)
+
+        output = lyr.Dense(4, activation='linear')(dense_2)
+
+        model = Model(inputs=inputs, outputs=output)
         model.compile(loss='mse',
                       optimizer='nadam')
         try:
@@ -49,7 +63,7 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
-        act_values = self.model.predict(state)
+        act_values = self.model.predict(np.array([state]))
         return np.argmax(act_values[0])  # returns action
 
     def replay(self, batch_size):
@@ -57,22 +71,22 @@ class DQNAgent:
         minibatch = random.sample(self.memory, batch_size)
 
         # Replay
-        inputs = np.zeros((batch_size, 16))
+        inputs = []
         targets = np.zeros((batch_size, 4))
 
         for i, (state, action, reward, next_state, done) in enumerate(minibatch):
-            inputs[i:i + 1] = state
-            old_q = self.model.predict(state)[0]
-            new_q = self.model.predict(next_state)[0]
+            inputs.append(state)
+            old_q = self.model.predict(np.array([state]))[0]
+            new_q = self.model.predict(np.array([next_state]))[0]
             update_target = np.copy(old_q)
 
-            if not done:
+            if done:
                 update_target[action] = -1
             else:
                 update_target[action] = reward + (self.gamma * np.max(new_q))
             targets[i] = update_target
 
-        loss = self.model.train_on_batch(inputs, targets)# , epochs=5, verbose=2)
+        loss = self.model.train_on_batch(np.array(inputs), targets)# , epochs=5, verbose=2)
         print("loss = ", loss)
         self.model.save_weights('weights.h5', overwrite=True)
         if self.epsilon > self.epsilon_min:

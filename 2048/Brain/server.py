@@ -32,7 +32,7 @@ def act():
     with graph.as_default():
 
         # Invokes Cloud ML model
-        response = {"action" : ACTIONS[agent.act(state)]}
+        response = {"action": ACTIONS[agent.act(state)]}
 
     return json.dumps(response)
 
@@ -47,6 +47,7 @@ def handle_results():
     state = parse_state(payload['current_state'])
     next_state = parse_state(payload['new_state'])
     reward = float(payload['reward'] > 0)
+    #reward = next_state.sum() - state.sum()
     done = payload['done']
     action = ACTIONS_MAP[payload['action']]
 
@@ -54,7 +55,7 @@ def handle_results():
 
     rounds_played += 1
     #print("played ", str(rounds_played), " rounds")
-    if (rounds_played > 5) or done:
+    if ((rounds_played > 5) or done) and (len(agent.memory)>300):
         #print("\n\ntraining!!\n\n")
         with graph.as_default():
             pass
@@ -65,10 +66,9 @@ def handle_results():
 
 
 def parse_state(state):
-    x = np.concatenate(state).ravel().tolist()
-    x = np.array(x).reshape(1, 16)
+    x = np.expand_dims(state, 2)
     x[x == 0] = 1
-    x = np.log2(x) / 16.0
+    x = np.log2(x) / 15
     return x
 
 if __name__ == '__main__':
