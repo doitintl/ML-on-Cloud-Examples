@@ -55,9 +55,10 @@ def handle_results():
     rounds_played += 1
     #print("played ", str(rounds_played), " rounds")
     if (rounds_played > 5) or done:
-        print("\n\ntraining!!\n\n")
+        #print("\n\ntraining!!\n\n")
         with graph.as_default():
-            agent.replay(300)
+            pass
+            agent.replay(500)
         rounds_played = 0
         print(f'epsilon={agent.epsilon}')
     return json.dumps({'result': 'success!'})

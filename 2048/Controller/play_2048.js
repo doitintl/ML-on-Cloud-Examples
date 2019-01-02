@@ -4,10 +4,10 @@
  * @desc  Plays 2048 vs the website
  */
 
-
+const fs = require('fs');
 const keys = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight']
 const puppeteer = require('puppeteer')
-const MAX_STAGNATION = 5
+const MAX_STAGNATION = 8
 
 async function request_action(body, agent_browser) {
 
@@ -83,7 +83,7 @@ async function get_board_state(page) {
 
       // Extract data from the ttitle
       x = parseInt(found[1]) - 1;
-      y = 4 - parseInt(found[2]) - 1;
+      y = parseInt(found[2]) - 1;
       merged = found[0].includes('merged');
 
       data.push({ x, y, value, merged }); // Push an object with the data onto our array
@@ -91,13 +91,12 @@ async function get_board_state(page) {
 
     mat = Array(4).fill(0).map(() => Array(4).fill(0))
     data.forEach(function (tile) {
-      mat[tile.x][tile.y] = tile.value
+      mat[tile.y][tile.x] = tile.value
     })
     data.forEach(function (tile) {
       if (tile.merged) {
-        mat[tile.x][tile.y] = tile.value
+        mat[tile.y][tile.x] = tile.value
       }
-      mat[tile.x][tile.y] = tile.value
     })
 
     return mat
@@ -112,7 +111,6 @@ async function get_board_state(page) {
 async function get_current_score(page) {
   var current_score = await page.evaluate(() => {
     const class_name = '.score-container';
-    let data = [];
     let elements = document.querySelectorAll(class_name);
     score_element = elements[0];
     return parseInt(score_element.innerText);
@@ -136,10 +134,10 @@ async function check_game_over(page) {
 /**
  * Plays a game
  */
-async function play_game() {
+async function play_game(trial_date,  headless) {
   try {
 
-    var browser = await puppeteer.launch({ headless: true })
+    var browser = await puppeteer.launch({ headless: headless })
     var agent_browser = await puppeteer.launch();
     const page = await browser.newPage();
     await page.goto('https://play2048.co/')
@@ -147,9 +145,9 @@ async function play_game() {
     await page.waitFor(3000); // for the page to first load
     
     var stagnation = 0; //counts the number of "stuck" moves
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 100000; i++) {
       sample = []
-      await page.waitFor(200);
+      await page.waitFor(100);
 
       var current_state = await get_board_state(page);
       var current_score = await get_current_score(page);
@@ -159,11 +157,11 @@ async function play_game() {
       })
 
       action = await request_action(body, agent_browser);
-      // action = keys[Math.floor(Math.random() * keys.length)];
+      //action = keys[Math.floor(Math.random() * keys.length)];
       await page.keyboard.press(action);
 
       // wait for webapp to render
-      await page.waitFor(200);
+      await page.waitFor(100);
 
       // get new state
       var new_score = await get_current_score(page);
@@ -189,6 +187,8 @@ async function play_game() {
       //console.log(sample)
       if (done) {
         stagnation = 0;
+        fs.appendFileSync(trial_date + '.csv', 'Game Ended!, Game reward = ' + new_score + "\n") ;
+
         console.log('Game Ended!, Game reward = ' + new_score);
         break;
       }
@@ -205,8 +205,10 @@ async function play_game() {
  * Main
  */
 (async () => {
+  trial_date = new Date().toISOString()
+  //trial_date = '2019-01-01T21:47:22.287Z'
   for (let i = 0; i < 100; i++) {
-    await play_game()
+    await play_game(trial_date=trial_date, headless=false)
     //console.log('game ' + i)
   }
 })()  
