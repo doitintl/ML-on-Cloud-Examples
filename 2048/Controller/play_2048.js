@@ -91,11 +91,11 @@ async function get_board_state(page) {
 
     mat = Array(4).fill(0).map(() => Array(4).fill(0))
     data.forEach(function (tile) {
-      mat[tile.y][tile.x] = tile.value
+      mat[tile.x][tile.y] = tile.value
     })
     data.forEach(function (tile) {
       if (tile.merged) {
-        mat[tile.y][tile.x] = tile.value
+        mat[tile.x][tile.y] = tile.value
       }
     })
 
@@ -206,9 +206,9 @@ async function play_game(trial_date,  headless) {
  */
 (async () => {
   trial_date = new Date().toISOString()
-  trial_date = '2019-01-02T19:07:34.197Z'
+  trial_date = '2019-01-03T13:41:41.302Z'
   for (let i = 0; i < 10000; i++) {
-    await play_game(trial_date=trial_date, headless=false)
+    await play_game(trial_date=trial_date, headless=true)
     //console.log('game ' + i)
   }
 })()  

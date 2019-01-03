@@ -3,7 +3,6 @@ from keras.models import Model
 import numpy as np
 from collections import deque
 import random
-import tensorflow as tf
 
 # Deep Q-learning Agent
 class DQNAgent:
@@ -12,14 +11,14 @@ class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=500)
+        self.MEMORY_SIZE = 1024
+        self.memory = deque(maxlen=self.MEMORY_SIZE)
         self.gamma = 0.99    # discount rate
-        self.epsilon = 0.1  # exploration rate
-        self.epsilon_min = 0.10
+        self.epsilon = 0.2  # exploration rate
+        self.epsilon_min = 0.01
         self.epsilon_decay = 0.001
-        self.learning_rate = 0.001
         self.model = self._build_model()
-        self.MEMORY_SIZE = 500
+
 
     def _build_model(self):
         inputs = lyr.Input(shape=(4, 4, 1))
@@ -39,8 +38,8 @@ class DQNAgent:
 
         concat = lyr.concatenate([flat_22, flat_14, flat_41])
 
-        dense_1 = lyr.Dense(128, activation='relu')(concat)
-        dense_2 = lyr.Dense(128, activation='relu')(dense_1)
+        dense_1 = lyr.Dense(32, activation='relu')(concat)
+        dense_2 = lyr.Dense(32, activation='relu')(dense_1)
 
         output = lyr.Dense(4, activation='linear')(dense_2)
 
@@ -89,5 +88,9 @@ class DQNAgent:
         loss = self.model.train_on_batch(np.array(inputs), targets)# , epochs=5, verbose=2)
         print("loss = ", loss)
         self.model.save_weights('weights.h5', overwrite=True)
+
         if self.epsilon > self.epsilon_min:
             self.epsilon -= self.epsilon_decay
+        elif np.random.rand() <= self.epsilon:
+                self.epsilon += 0.02
+
