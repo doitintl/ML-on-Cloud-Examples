@@ -208,7 +208,7 @@ async function play_game(trial_date,  headless) {
   trial_date = new Date().toISOString()
   trial_date = '2019-01-03T13:41:41.302Z'
   for (let i = 0; i < 10000; i++) {
-    await play_game(trial_date=trial_date, headless=true)
+    await play_game(trial_date=trial_date, headless=false)
     //console.log('game ' + i)
   }
 })()  

@@ -14,8 +14,8 @@ class DQNAgent:
         self.MEMORY_SIZE = 1024
         self.memory = deque(maxlen=self.MEMORY_SIZE)
         self.gamma = 0.99    # discount rate
-        self.epsilon = 0.2  # exploration rate
-        self.epsilon_min = 0.01
+        self.epsilon = 0.01  # exploration rate
+        self.epsilon_min = 0.005
         self.epsilon_decay = 0.001
         self.model = self._build_model()
 
@@ -48,8 +48,8 @@ class DQNAgent:
                       optimizer='nadam')
         try:
             model.load_weights('weights.h5')
-        except:
-            pass
+        except Exception as e:
+            print (e)
 
         return model
 
@@ -92,5 +92,5 @@ class DQNAgent:
         if self.epsilon > self.epsilon_min:
             self.epsilon -= self.epsilon_decay
         elif np.random.rand() <= self.epsilon:
-                self.epsilon += 0.02
+                self.epsilon += 0.03
 
