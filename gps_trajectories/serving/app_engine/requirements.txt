@@ -1,5 +1,5 @@
 Flask==1.0.2
-gunicorn==19.3.0
+gunicorn==19.5.0
 pandas==0.23.4
 requests==2.20.0
 haversine
